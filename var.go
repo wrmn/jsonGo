@@ -63,10 +63,10 @@ type PaymentResponse struct {
 }
 
 type InsPaymentResponse struct {
-	ResponseCode        int    `json:"responseCode"`
-	ReasonCode          int    `json:"reasonCode"`
-	ResponseDescription string `json:"responseDescription"`
-	Response            string `json:"processingCode"`
+	ResponseCode        int         `json:"responseCode"`
+	ReasonCode          int         `json:"reasonCode"`
+	ResponseDescription string      `json:"responseDescription"`
+	Response            Transaction `json:"processingCode"`
 }
 
 type DelPaymentResponse struct {

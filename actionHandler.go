@@ -86,7 +86,7 @@ func createPayment(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		response.ResponseCode = 200
 		response.ResponseDescription = "success"
-		response.Response = processingCode
+		response.Response = selectPayment(processingCode, dbCon)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
