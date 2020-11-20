@@ -48,25 +48,25 @@ type Transaction struct {
 	AdditionalDataNational        string           `json:"additionalDataNational"`
 }
 
+type Response struct {
+	ResponseCode        int    `json:"responseCode"`
+	ReasonCode          int    `json:"reasonCode"`
+	ResponseDescription string `json:"responseDescription"`
+}
+
 type PaymentsResponse struct {
-	ResponseCode        int           `json:"responseCode"`
-	ReasonCode          int           `json:"reasonCode"`
-	ResponseDescription string        `json:"responseDescription"`
-	Response            []Transaction `json:"response"`
+	TransactionData []Transaction `json:"transactionData"`
+	ResponseStatus  Response      `json:"responseStatus"`
 }
 
 type PaymentResponse struct {
-	ResponseCode        int         `json:"responseCode"`
-	ReasonCode          int         `json:"reasonCode"`
-	ResponseDescription string      `json:"responseDescription"`
-	Response            Transaction `json:"response"`
+	TransactionData Transaction `json:"response"`
+	ResponseStatus  Response    `json:"responseStatus"`
 }
 
 type InsPaymentResponse struct {
-	ResponseCode        int         `json:"responseCode"`
-	ReasonCode          int         `json:"reasonCode"`
-	ResponseDescription string      `json:"responseDescription"`
-	Response            Transaction `json:"processingCode"`
+	TransactionData Transaction `json:"processingCode"`
+	ResponseStatus  Response    `json"responseStatus":`
 }
 
 type DelPaymentResponse struct {

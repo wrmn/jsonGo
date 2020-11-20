@@ -20,15 +20,15 @@ func getPayments(w http.ResponseWriter, r *http.Request) {
 	err := pingDb(dbCon)
 
 	if err != nil {
-		response.ResponseCode = 500
-		response.ResponseDescription = serverError
+		response.ResponseStatus.ReasonCode = 500
+		response.ResponseStatus.ResponseDescription = serverError
 	} else {
 		w.WriteHeader(200)
-		response.ResponseCode = 200
-		response.ResponseDescription = "success"
+		response.ResponseStatus.ResponseCode = 200
+		response.ResponseStatus.ResponseDescription = "success"
 		payments := selectPayments(dbCon)
 
-		response.Response = payments
+		response.TransactionData = payments
 	}
 
 	json.NewEncoder(w).Encode(response)
@@ -41,15 +41,15 @@ func getPayment(w http.ResponseWriter, r *http.Request) {
 	processingCode := mux.Vars(r)["id"]
 
 	if err != nil {
-		response.ResponseCode = 500
-		response.ResponseDescription = serverError
+		response.ResponseStatus.ResponseCode = 500
+		response.ResponseStatus.ResponseDescription = serverError
 	} else {
 		w.WriteHeader(200)
-		response.ResponseCode = 200
-		response.ResponseDescription = "success"
+		response.ResponseStatus.ResponseCode = 200
+		response.ResponseStatus.ResponseDescription = "success"
 		payments := selectPayment(processingCode, dbCon)
 
-		response.Response = payments
+		response.TransactionData = payments
 	}
 
 	json.NewEncoder(w).Encode(response)
@@ -82,18 +82,18 @@ func createPayment(w http.ResponseWriter, r *http.Request) {
 		processingCode, err := insertPayment(trs, dbCon)
 
 		if err != nil {
-			response.ResponseCode = 500
-			response.ResponseDescription = err.Error()
+			response.ResponseStatus.ReasonCode = 500
+			response.ResponseStatus.ResponseDescription = err.Error()
 		} else {
 			w.WriteHeader(200)
-			response.ResponseCode = 200
-			response.ResponseDescription = "success"
-			response.Response = selectPayment(processingCode, dbCon)
+			response.ResponseStatus.ReasonCode = 200
+			response.ResponseStatus.ResponseDescription = "success"
+			response.TransactionData = selectPayment(processingCode, dbCon)
 		}
 	} else {
-		response.ResponseCode = 500
-		response.ResponseDescription = "duplicate processingCode"
-		response.Response = trs
+		response.ResponseStatus.ResponseCode = 500
+		response.ResponseStatus.ResponseDescription = "duplicate processingCode"
+		response.TransactionData = trs
 	}
 
 	w.Header().Set("Content-Type", "application/json")
