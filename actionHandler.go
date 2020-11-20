@@ -38,7 +38,7 @@ func getPayment(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	err := pingDb(dbCon)
 
-	pan := mux.Vars(r)["id"]
+	processingCode := mux.Vars(r)["id"]
 
 	if err != nil {
 		response.ResponseCode = 500
@@ -47,7 +47,7 @@ func getPayment(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		response.ResponseCode = 200
 		response.ResponseDescription = "success"
-		payments := selectPayment(pan, dbCon)
+		payments := selectPayment(processingCode, dbCon)
 
 		response.Response = payments
 	}
@@ -77,16 +77,23 @@ func createPayment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	processingCode, err := insertPayment(trs, dbCon)
+	if checkExistence(trs.ProcessingCode, dbCon) {
 
-	if err != nil {
-		response.ResponseCode = 500
-		response.ResponseDescription = err.Error()
+		processingCode, err := insertPayment(trs, dbCon)
+
+		if err != nil {
+			response.ResponseCode = 500
+			response.ResponseDescription = err.Error()
+		} else {
+			w.WriteHeader(200)
+			response.ResponseCode = 200
+			response.ResponseDescription = "success"
+			response.Response = selectPayment(processingCode, dbCon)
+		}
 	} else {
-		w.WriteHeader(200)
-		response.ResponseCode = 200
-		response.ResponseDescription = "success"
-		response.Response = selectPayment(processingCode, dbCon)
+		response.ResponseCode = 500
+		response.ResponseDescription = "duplicate processingCode"
+		response.Response = trs
 	}
 
 	w.Header().Set("Content-Type", "application/json")

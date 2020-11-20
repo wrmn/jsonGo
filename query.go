@@ -112,4 +112,8 @@ const (
 	delTransactionQuery = `
 		DELETE FROM transaction WHERE processingCode = ?		
 	`
+
+	checkQuery = `
+		SELECT count(*) FROM transaction WHERE processingCode = ?
+	`
 )

@@ -140,6 +140,20 @@ func insertPayment(data Transaction, db *sql.DB) (string, error) {
 
 }
 
+func checkExistence(procCode string, db *sql.DB) bool {
+	var total int
+	rowCheck, e := db.Query(checkQuery, procCode)
+	errorCheck(e)
+	for rowCheck.Next() {
+		e = rowCheck.Scan(&total)
+		errorCheck(e)
+	}
+	if total != 0 {
+		return false
+	}
+	return true
+}
+
 func dropPayment(procCode string, db *sql.DB) error {
 	_, e := db.Query(delTransactionQuery, procCode)
 	return e
