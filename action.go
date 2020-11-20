@@ -39,7 +39,7 @@ func selectPayments(db *sql.DB) []Transaction {
 			&payment.AdditionalDataNational,
 		)
 		errorCheck(e)
-		payment.CardAcceptorData = selectAcceptor(payment.Pan, db)
+		payment.CardAcceptorData = selectAcceptor(payment.ProcessingCode, db)
 		payments = append(payments, payment)
 	}
 	return payments
@@ -101,7 +101,7 @@ func selectAcceptor(procCode string, db *sql.DB) CardAcceptedData {
 
 func insertPayment(data Transaction, db *sql.DB) (string, error) {
 	stmt, e := db.Prepare(insertQuery)
-	fmt.Println(data)
+	fmt.Println(data.CardAcceptorData.TerminalId)
 	errorCheck(e)
 	_, e = stmt.Exec(
 		data.Pan,
