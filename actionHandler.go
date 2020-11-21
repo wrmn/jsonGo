@@ -2,21 +2,21 @@ package main
 
 import (
 	"encoding/json"
-	"io"
+	"fmt"
 	"io/ioutil"
 	"net/http"
-	"time"
+	"reflect"
 
 	"github.com/gorilla/mux"
 )
 
 func mainHandler(w http.ResponseWriter, r *http.Request) {
-	io.WriteString(w, time.Now().Format("15:04:05"))
 }
 
 func getPayments(w http.ResponseWriter, r *http.Request) {
-	response := PaymentsResponse{}
 	w.Header().Set("Content-Type", "application/json")
+
+	response := PaymentsResponse{}
 	err := pingDb(dbCon)
 
 	if err != nil {
@@ -24,20 +24,21 @@ func getPayments(w http.ResponseWriter, r *http.Request) {
 		response.ResponseStatus.ResponseDescription = serverError
 	} else {
 		w.WriteHeader(200)
-		response.ResponseStatus.ResponseCode = 200
-		response.ResponseStatus.ResponseDescription = "success"
 		payments := selectPayments(dbCon)
 
+		response.ResponseStatus.ResponseCode = 200
+		response.ResponseStatus.ResponseDescription = "success"
 		response.TransactionData = payments
 	}
 
 	json.NewEncoder(w).Encode(response)
 }
-func getPayment(w http.ResponseWriter, r *http.Request) {
-	response := PaymentResponse{}
-	w.Header().Set("Content-Type", "application/json")
-	err := pingDb(dbCon)
 
+func getPayment(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	response := PaymentResponse{}
+	err := pingDb(dbCon)
 	processingCode := mux.Vars(r)["id"]
 
 	if err != nil {
@@ -45,47 +46,34 @@ func getPayment(w http.ResponseWriter, r *http.Request) {
 		response.ResponseStatus.ResponseDescription = serverError
 	} else {
 		w.WriteHeader(200)
-		response.ResponseStatus.ResponseCode = 200
-		response.ResponseStatus.ResponseDescription = "success"
 		payments := selectPayment(processingCode, dbCon)
 
+		response.ResponseStatus.ResponseCode = 200
+		response.ResponseStatus.ResponseDescription = "success"
 		response.TransactionData = payments
 	}
-
 	json.NewEncoder(w).Encode(response)
 }
 
 func createPayment(w http.ResponseWriter, r *http.Request) {
-	b, err := ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
+
+	b, err := ioutil.ReadAll(r.Body)
 	response := InsPaymentResponse{}
 
-	if !(errorCheck(err)) {
-		return
-	}
-
+	errorCheck(err)
 	var trs Transaction
 	err = json.Unmarshal(b, &trs)
 
-	if !(errorCheck(err)) {
-		http.Error(w, err.Error(), 500)
-		return
-	}
-
-	if !(errorCheck(err)) {
-		http.Error(w, err.Error(), 500)
-		return
-	}
+	errorCheck(err)
 
 	if checkExistence(trs.ProcessingCode, dbCon) {
-
 		processingCode, err := insertPayment(trs, dbCon)
 
 		if err != nil {
 			response.ResponseStatus.ReasonCode = 500
 			response.ResponseStatus.ResponseDescription = err.Error()
 		} else {
-			w.WriteHeader(200)
 			response.ResponseStatus.ReasonCode = 200
 			response.ResponseStatus.ResponseDescription = "success"
 			response.TransactionData = selectPayment(processingCode, dbCon)
@@ -97,10 +85,32 @@ func createPayment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	fmt.Print(w.Header().Values("Content-Type"))
 	json.NewEncoder(w).Encode(response)
 }
 
 func updatePayment(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	b, err := ioutil.ReadAll(r.Body)
+
+	errorCheck(err)
+
+	var trs Transaction
+	err = json.Unmarshal(b, &trs)
+
+	s := reflect.ValueOf(&trs).Elem()
+	typeOfT := s.Type()
+
+	for i := 0; i < s.NumField(); i++ {
+		f := s.Field(i)
+
+		typeOfF := fmt.Sprintf(typeOfT.Field(i).Type.Name())
+
+		if typeOfF == "string" {
+			as := fmt.Sprintf(" %s %s = %v", typeOfT.Field(i).Name, f.Type(), f.Interface())
+			fmt.Println(as)
+		}
+	}
 }
 
 func deletePayment(w http.ResponseWriter, r *http.Request) {
@@ -117,8 +127,8 @@ func deletePayment(w http.ResponseWriter, r *http.Request) {
 		payment := selectPayment(procCode, dbCon)
 		if payment.ProcessingCode == "" {
 			w.WriteHeader(400)
-			response.ResponseDescription = "data not exist"
 			response.ResponseCode = 400
+			response.ResponseDescription = "data not exist"
 		} else {
 			dropPayment(procCode, dbCon)
 			w.WriteHeader(200)

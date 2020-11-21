@@ -2,12 +2,10 @@ package main
 
 import "database/sql"
 
-func errorCheck(err error) bool {
+func errorCheck(err error) {
 	if err != nil {
 		panic(err.Error())
-		return false
 	}
-	return true
 }
 
 func pingDb(db *sql.DB) error {
