@@ -14,6 +14,10 @@ import (
 func mainHandler(w http.ResponseWriter, r *http.Request) {
 }
 
+// handler action from route with request get all payments
+// todo
+// return error from query
+// get limit
 func getPayments(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -35,6 +39,10 @@ func getPayments(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// handler action from route with request get payment with
+// procid
+// todo
+// return error from query
 func getPayment(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -56,6 +64,10 @@ func getPayment(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+//handler action from route with request post with json body required
+//todo
+//check if json in correct format
+//return error from query
 func createPayment(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
@@ -90,10 +102,15 @@ func createPayment(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+//handler action from route with request put with json body required
+//todo
+//check if json in correct format
+//return error from query
 func updatePayment(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	b, err := ioutil.ReadAll(r.Body)
 
+	w.Header().Set("Content-Type", "application/json")
 	errorCheck(err)
 
 	var trs Transaction
@@ -106,6 +123,7 @@ func updatePayment(w http.ResponseWriter, r *http.Request) {
 	typeOfT := s.Type()
 	typeOfU := t.Type()
 	procCode := mux.Vars(r)["id"]
+	response := DelPaymentResponse{}
 
 	for i := 0; i < s.NumField(); i++ {
 		f := s.Field(i)
@@ -127,17 +145,39 @@ func updatePayment(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	preQue := strings.Join(canQue, ", ")
-	exeQue := fmt.Sprintln("UPDATE transaction SET " + preQue + " where processingCode =?")
-	putPayment(exeQue, procCode, dbCon)
+	exeQue := fmt.Sprintln("UPDATE transaction SET " + preQue + " where processingCode =" + procCode)
+
+	payment := selectPayment(procCode, dbCon)
+	err = putPayment(exeQue, dbCon)
+	if err != nil {
+		fmt.Print(err.Error())
+		response.ResponseCode = 500
+		response.ResponseDescription = err.Error()
+	} else {
+		if payment.ProcessingCode == "" {
+			w.WriteHeader(400)
+			response.ResponseCode = 400
+			response.ResponseDescription = "data not exist"
+		} else {
+			dropPayment(procCode, dbCon)
+			w.WriteHeader(200)
+			response.ResponseCode = 200
+			response.ResponseDescription = "updated"
+		}
+	}
+
+	json.NewEncoder(w).Encode(response)
 }
 
+//handler action from route with request delte based on proc code that send as param
+//todo
+//return error from query
 func deletePayment(w http.ResponseWriter, r *http.Request) {
 	response := DelPaymentResponse{}
 	w.Header().Set("Content-Type", "application/json")
 	err := pingDb(dbCon)
 
 	procCode := mux.Vars(r)["id"]
-
 	if err != nil {
 		response.ResponseCode = 500
 		response.ResponseDescription = serverError

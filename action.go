@@ -1,10 +1,10 @@
 package main
 
-import (
-	"database/sql"
-	"fmt"
-)
+import "database/sql"
 
+// query for select all payments
+// todo
+// add limit
 func selectPayments(db *sql.DB) []Transaction {
 	payments := []Transaction{}
 	rowsPayment, e := db.Query(transactionsQuery)
@@ -45,6 +45,7 @@ func selectPayments(db *sql.DB) []Transaction {
 	return payments
 }
 
+// query select payment based on procCode
 func selectPayment(procCode string, db *sql.DB) Transaction {
 	payment = Transaction{}
 	rowPayment, e := db.Query(transactionQuery, procCode)
@@ -83,6 +84,7 @@ func selectPayment(procCode string, db *sql.DB) Transaction {
 	return payment
 }
 
+//query for make acceptor has it own field on response json
 func selectAcceptor(procCode string, db *sql.DB) CardAcceptorData {
 	acceptor = CardAcceptorData{}
 	rowsAcceptor, e := db.Query(acceptorQuery, procCode)
@@ -99,9 +101,9 @@ func selectAcceptor(procCode string, db *sql.DB) CardAcceptorData {
 	return acceptor
 }
 
+//query for insert payment
 func insertPayment(data Transaction, db *sql.DB) (string, error) {
 	stmt, e := db.Prepare(insertQuery)
-	fmt.Println(data.CardAcceptorData.CardAcceptorTerminalId)
 	errorCheck(e)
 	_, e = stmt.Exec(
 		data.Pan,
@@ -139,10 +141,15 @@ func insertPayment(data Transaction, db *sql.DB) (string, error) {
 	return data.ProcessingCode, e
 }
 
-func putPayment(exeQue string, procCode string, db *sql.DB) {
-	db.Query(exeQue, procCode)
+// query for update payment
+func putPayment(updateQuery string, db *sql.DB) error {
+	_, e := db.Query(updateQuery)
+	return e
 }
 
+// query for select from proc code with less time than select all for check update and delete
+// if data does not exist on this query the update or delete can't run
+// and return response "data does not exist"
 func checkExistence(procCode string, db *sql.DB) bool {
 	var total int
 	rowCheck, e := db.Query(checkQuery, procCode)
@@ -157,6 +164,7 @@ func checkExistence(procCode string, db *sql.DB) bool {
 	return true
 }
 
+//query for delete payment data
 func dropPayment(procCode string, db *sql.DB) error {
 	_, e := db.Query(delTransactionQuery, procCode)
 	return e

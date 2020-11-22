@@ -30,7 +30,7 @@ const (
 			additionalDataNational
 		FROM
 			transaction
-		WHERE processingCode =?
+		WHERE processingCode = ?
 	`
 	transactionsQuery = `
 		SELECT
