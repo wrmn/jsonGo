@@ -5,18 +5,18 @@ import "database/sql"
 var (
 	dbCon    *sql.DB
 	payment  = Transaction{}
-	acceptor = CardAcceptedData{}
+	acceptor = CardAcceptorData{}
 )
 
 const (
 	serverError = "Internal server error, database disconnected. Contact Administrator"
 )
 
-type CardAcceptedData struct {
-	TerminalId  string `json:"cardAcceptorTerminalID"`
-	Name        string `json:"cardAcceptorName"`
-	City        string `json:"cardAcceptorCity"`
-	CountryCode string `json:"cardAcceptorCountryCode"`
+type CardAcceptorData struct {
+	CardAcceptorTerminalId  string `json:"cardAcceptorTerminalID"`
+	CardAcceptorName        string `json:"cardAcceptorName"`
+	CardAcceptorCity        string `json:"cardAcceptorCity"`
+	CardAcceptorCountryCode string `json:"cardAcceptorCountryCode"`
 }
 
 type Transaction struct {
@@ -42,7 +42,7 @@ type Transaction struct {
 	SettlementConversionrate      string           `json:"settlementConversionrate"`
 	CardHolderBillingConvRate     string           `json:"cardHolderBillingConvRate"`
 	PointOfServiceEntryMode       string           `json:"pointOfServiceEntryMode"`
-	CardAcceptorData              CardAcceptedData `json:"cardAcceptorData"`
+	CardAcceptorData              CardAcceptorData `json:"cardAcceptorData"`
 	SettlementCurrencyCode        string           `json:"settlementCurrencyCode"`
 	CardHolderBillingCurrencyCode string           `json:"cardHolderBillingCurrencyCode"`
 	AdditionalDataNational        string           `json:"additionalDataNational"`
@@ -66,7 +66,7 @@ type PaymentResponse struct {
 
 type InsPaymentResponse struct {
 	TransactionData Transaction `json:"processingCode"`
-	ResponseStatus  Response    `json"responseStatus":`
+	ResponseStatus  Response    `json:"responseStatus"`
 }
 
 type DelPaymentResponse struct {

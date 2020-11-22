@@ -83,16 +83,16 @@ func selectPayment(procCode string, db *sql.DB) Transaction {
 	return payment
 }
 
-func selectAcceptor(procCode string, db *sql.DB) CardAcceptedData {
-	acceptor = CardAcceptedData{}
+func selectAcceptor(procCode string, db *sql.DB) CardAcceptorData {
+	acceptor = CardAcceptorData{}
 	rowsAcceptor, e := db.Query(acceptorQuery, procCode)
 	errorCheck(e)
 	for rowsAcceptor.Next() {
 		e = rowsAcceptor.Scan(
-			&acceptor.TerminalId,
-			&acceptor.Name,
-			&acceptor.City,
-			&acceptor.CountryCode,
+			&acceptor.CardAcceptorTerminalId,
+			&acceptor.CardAcceptorName,
+			&acceptor.CardAcceptorCity,
+			&acceptor.CardAcceptorCountryCode,
 		)
 		errorCheck(e)
 	}
@@ -101,7 +101,7 @@ func selectAcceptor(procCode string, db *sql.DB) CardAcceptedData {
 
 func insertPayment(data Transaction, db *sql.DB) (string, error) {
 	stmt, e := db.Prepare(insertQuery)
-	fmt.Println(data.CardAcceptorData.TerminalId)
+	fmt.Println(data.CardAcceptorData.CardAcceptorTerminalId)
 	errorCheck(e)
 	_, e = stmt.Exec(
 		data.Pan,
@@ -126,18 +126,21 @@ func insertPayment(data Transaction, db *sql.DB) (string, error) {
 		data.SettlementConversionrate,
 		data.CardHolderBillingConvRate,
 		data.PointOfServiceEntryMode,
-		data.CardAcceptorData.TerminalId,
-		data.CardAcceptorData.Name,
-		data.CardAcceptorData.City,
-		data.CardAcceptorData.CountryCode,
+		data.CardAcceptorData.CardAcceptorTerminalId,
+		data.CardAcceptorData.CardAcceptorName,
+		data.CardAcceptorData.CardAcceptorCity,
+		data.CardAcceptorData.CardAcceptorCountryCode,
 		data.SettlementCurrencyCode,
 		data.CardHolderBillingCurrencyCode,
 		data.AdditionalDataNational,
 	)
 	errorCheck(e)
-
+	stmt.Close()
 	return data.ProcessingCode, e
+}
 
+func putPayment(exeQue string, procCode string, db *sql.DB) {
+	db.Query(exeQue, procCode)
 }
 
 func checkExistence(procCode string, db *sql.DB) bool {

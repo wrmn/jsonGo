@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -96,21 +97,38 @@ func updatePayment(w http.ResponseWriter, r *http.Request) {
 	errorCheck(err)
 
 	var trs Transaction
+	var canQue []string
+	var as string
 	err = json.Unmarshal(b, &trs)
 
 	s := reflect.ValueOf(&trs).Elem()
+	t := reflect.ValueOf(&trs.CardAcceptorData).Elem()
 	typeOfT := s.Type()
+	typeOfU := t.Type()
+	procCode := mux.Vars(r)["id"]
 
 	for i := 0; i < s.NumField(); i++ {
 		f := s.Field(i)
 
 		typeOfF := fmt.Sprintf(typeOfT.Field(i).Type.Name())
 
-		if typeOfF == "string" {
-			as := fmt.Sprintf(" %s %s = %v", typeOfT.Field(i).Name, f.Type(), f.Interface())
-			fmt.Println(as)
+		if typeOfF == "CardAcceptorData" {
+			for j := 0; j < t.NumField(); j++ {
+				g := t.Field(j)
+				as = fmt.Sprintf("%s='%v'", typeOfU.Field(j).Name, g.Interface())
+				canQue = append(canQue, as)
+			}
+		} else {
+			val := f.Interface()
+			if val != "" {
+				as = fmt.Sprintf("%s='%v'", typeOfT.Field(i).Name, f.Interface())
+				canQue = append(canQue, as)
+			}
 		}
 	}
+	preQue := strings.Join(canQue, ", ")
+	exeQue := fmt.Sprintln("UPDATE transaction SET " + preQue + " where processingCode =?")
+	putPayment(exeQue, procCode, dbCon)
 }
 
 func deletePayment(w http.ResponseWriter, r *http.Request) {
