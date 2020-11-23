@@ -5,7 +5,7 @@ import "database/sql"
 // query for select all payments
 // todo
 // add limit
-func selectPayments(db *sql.DB) []Transaction {
+func selectPayments(db *sql.DB) ([]Transaction, error) {
 	payments := []Transaction{}
 	rowsPayment, e := db.Query(transactionsQuery)
 	errorCheck(e)
@@ -38,15 +38,14 @@ func selectPayments(db *sql.DB) []Transaction {
 			&payment.CardHolderBillingCurrencyCode,
 			&payment.AdditionalDataNational,
 		)
-		errorCheck(e)
 		payment.CardAcceptorData = selectAcceptor(payment.ProcessingCode, db)
 		payments = append(payments, payment)
 	}
-	return payments
+	return payments, e
 }
 
 // query select payment based on procCode
-func selectPayment(procCode string, db *sql.DB) Transaction {
+func selectPayment(procCode string, db *sql.DB) (Transaction, error) {
 	payment = Transaction{}
 	rowPayment, e := db.Query(transactionQuery, procCode)
 	errorCheck(e)
@@ -78,10 +77,9 @@ func selectPayment(procCode string, db *sql.DB) Transaction {
 			&payment.CardHolderBillingCurrencyCode,
 			&payment.AdditionalDataNational,
 		)
-		errorCheck(e)
 		payment.CardAcceptorData = selectAcceptor(procCode, db)
 	}
-	return payment
+	return payment, e
 }
 
 //query for make acceptor has it own field on response json
