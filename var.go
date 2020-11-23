@@ -64,11 +64,6 @@ type PaymentResponse struct {
 	ResponseStatus  Response    `json:"responseStatus"`
 }
 
-type InsPaymentResponse struct {
-	TransactionData Transaction `json:"processingCode"`
-	ResponseStatus  Response    `json:"responseStatus"`
-}
-
 type DelPaymentResponse struct {
 	ResponseCode        int    `json:"responseCode"`
 	ReasonCode          int    `json:"reasonCode"`

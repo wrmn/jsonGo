@@ -25,6 +25,8 @@ func getPayments(w http.ResponseWriter, r *http.Request) {
 	err := pingDb(dbCon)
 
 	if err != nil {
+
+		w.WriteHeader(500)
 		response.ResponseStatus.ReasonCode = 500
 		response.ResponseStatus.ResponseDescription = serverError
 	} else {
@@ -51,14 +53,12 @@ func getPayment(w http.ResponseWriter, r *http.Request) {
 	processingCode := mux.Vars(r)["id"]
 
 	if err != nil {
-		response.ResponseStatus.ResponseCode = 500
-		response.ResponseStatus.ResponseDescription = serverError
+		response.ResponseStatus.ReasonCode, response.ResponseStatus.ResponseDescription = 500, serverError
 	} else {
 		w.WriteHeader(200)
 		payments := selectPayment(processingCode, dbCon)
 
-		response.ResponseStatus.ResponseCode = 200
-		response.ResponseStatus.ResponseDescription = "success"
+		response.ResponseStatus.ResponseCode, response.ResponseStatus.ResponseDescription = 200, "success"
 		response.TransactionData = payments
 	}
 	json.NewEncoder(w).Encode(response)
@@ -72,33 +72,36 @@ func createPayment(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	b, err := ioutil.ReadAll(r.Body)
-	response := InsPaymentResponse{}
-
 	errorCheck(err)
-	var trs Transaction
-	err = json.Unmarshal(b, &trs)
+	response := PaymentResponse{}
 
-	errorCheck(err)
+	err = pingDb(dbCon)
 
-	if checkExistence(trs.ProcessingCode, dbCon) {
-		processingCode, err := insertPayment(trs, dbCon)
-
-		if err != nil {
-			response.ResponseStatus.ReasonCode = 500
-			response.ResponseStatus.ResponseDescription = err.Error()
-		} else {
-			response.ResponseStatus.ReasonCode = 200
-			response.ResponseStatus.ResponseDescription = "success"
-			response.TransactionData = selectPayment(processingCode, dbCon)
-		}
+	if err != nil {
+		response.ResponseStatus.ReasonCode, response.ResponseStatus.ResponseDescription = 500, serverError
 	} else {
-		response.ResponseStatus.ResponseCode = 500
-		response.ResponseStatus.ResponseDescription = "duplicate processingCode"
-		response.TransactionData = trs
+		errorCheck(err)
+		var trs Transaction
+		err = json.Unmarshal(b, &trs)
+
+		errorCheck(err)
+
+		if checkExistence(trs.ProcessingCode, dbCon) {
+			processingCode, err := insertPayment(trs, dbCon)
+
+			if err != nil {
+				response.ResponseStatus.ReasonCode, response.ResponseStatus.ResponseDescription = 500, err.Error()
+			} else {
+				response.ResponseStatus.ReasonCode, response.ResponseStatus.ResponseDescription = 200, "success"
+				response.TransactionData = selectPayment(processingCode, dbCon)
+			}
+		} else {
+			response.ResponseStatus.ResponseCode, response.ResponseStatus.ResponseDescription = 500, "duplicate processingCode"
+			response.TransactionData = trs
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Print(w.Header().Values("Content-Type"))
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -123,7 +126,7 @@ func updatePayment(w http.ResponseWriter, r *http.Request) {
 	typeOfT := s.Type()
 	typeOfU := t.Type()
 	procCode := mux.Vars(r)["id"]
-	response := DelPaymentResponse{}
+	response := PaymentResponse{}
 
 	for i := 0; i < s.NumField(); i++ {
 		f := s.Field(i)
@@ -150,19 +153,16 @@ func updatePayment(w http.ResponseWriter, r *http.Request) {
 	payment := selectPayment(procCode, dbCon)
 	err = putPayment(exeQue, dbCon)
 	if err != nil {
-		fmt.Print(err.Error())
-		response.ResponseCode = 500
-		response.ResponseDescription = err.Error()
+		w.WriteHeader(500)
+		response.ResponseStatus.ReasonCode, response.ResponseStatus.ResponseDescription = 500, err.Error()
 	} else {
 		if payment.ProcessingCode == "" {
 			w.WriteHeader(400)
-			response.ResponseCode = 400
-			response.ResponseDescription = "data not exist"
+			response.ResponseStatus.ReasonCode, response.ResponseStatus.ResponseDescription = 400, "data not exist"
 		} else {
-			dropPayment(procCode, dbCon)
 			w.WriteHeader(200)
-			response.ResponseCode = 200
-			response.ResponseDescription = "updated"
+			response.ResponseStatus.ResponseCode, response.ResponseStatus.ResponseDescription = 200, "updated"
+			response.TransactionData = trs
 		}
 	}
 
@@ -179,19 +179,17 @@ func deletePayment(w http.ResponseWriter, r *http.Request) {
 
 	procCode := mux.Vars(r)["id"]
 	if err != nil {
-		response.ResponseCode = 500
-		response.ResponseDescription = serverError
+		w.WriteHeader(500)
+		response.ResponseCode, response.ResponseDescription = 500, serverError
 	} else {
 		payment := selectPayment(procCode, dbCon)
 		if payment.ProcessingCode == "" {
 			w.WriteHeader(400)
-			response.ResponseCode = 400
-			response.ResponseDescription = "data not exist"
+			response.ResponseCode, response.ResponseDescription = 400, "data not exist"
 		} else {
 			dropPayment(procCode, dbCon)
 			w.WriteHeader(200)
-			response.ResponseCode = 200
-			response.ResponseDescription = "Deleted"
+			response.ResponseCode, response.ResponseDescription = 200, "Deleted"
 		}
 	}
 
