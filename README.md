@@ -35,9 +35,6 @@ go build -o {program name}
 - `/payment/{id}` : Delete data with sended processing code from database
 
 ## ToDos
-- Response when database disconnected when program is running
-- Response when data that received is out of range of data in database or Query error
-- Response format when received any PUT request
 - Showing Help when go to any method that not allowed, not found method, or home page
 - inspect JSON that receivedas a body and if mandatory field is empty return an error response
 

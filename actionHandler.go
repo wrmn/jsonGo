@@ -80,6 +80,7 @@ func getPayment(w http.ResponseWriter, r *http.Request) {
 func createPayment(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
+	w.Header().Set("Content-Type", "application/json")
 	b, err := ioutil.ReadAll(r.Body)
 	errorCheck(err)
 	response := PaymentResponse{}
@@ -89,7 +90,6 @@ func createPayment(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		response.ResponseStatus.ReasonCode, response.ResponseStatus.ResponseDescription = 500, serverError
 	} else {
-		errorCheck(err)
 		var trs Transaction
 		err = json.Unmarshal(b, &trs)
 
@@ -99,18 +99,20 @@ func createPayment(w http.ResponseWriter, r *http.Request) {
 			processingCode, err := insertPayment(trs, dbCon)
 
 			if err != nil {
+				w.WriteHeader(500)
 				response.ResponseStatus.ReasonCode, response.ResponseStatus.ResponseDescription = 500, err.Error()
 			} else {
+				w.WriteHeader(200)
 				response.ResponseStatus.ReasonCode, response.ResponseStatus.ResponseDescription = 200, "success"
 				response.TransactionData, _ = selectPayment(processingCode, dbCon)
 			}
 		} else {
-			response.ResponseStatus.ResponseCode, response.ResponseStatus.ResponseDescription = 500, "duplicate processingCode"
+			w.WriteHeader(403)
+			response.ResponseStatus.ResponseCode, response.ResponseStatus.ResponseDescription = 403, "duplicate processingCode"
 			response.TransactionData = trs
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -145,22 +147,26 @@ func updatePayment(w http.ResponseWriter, r *http.Request) {
 		if typeOfF == "CardAcceptorData" {
 			for j := 0; j < t.NumField(); j++ {
 				g := t.Field(j)
-				as = fmt.Sprintf("%s='%v'", typeOfU.Field(j).Name, g.Interface())
-				canQue = append(canQue, as)
+				val := g.Interface()
+				if val != "" && val != "0" {
+					as = fmt.Sprintf("%s='%v'", typeOfU.Field(j).Name, g.Interface())
+					canQue = append(canQue, as)
+				}
 			}
 		} else {
 			val := f.Interface()
-			if val != "" {
+			if val != "" && val != 0 {
 				as = fmt.Sprintf("%s='%v'", typeOfT.Field(i).Name, f.Interface())
 				canQue = append(canQue, as)
 			}
 		}
 	}
+
 	preQue := strings.Join(canQue, ", ")
 	exeQue := fmt.Sprintln("UPDATE transaction SET " + preQue + " where processingCode =" + procCode)
-
 	payment, _ := selectPayment(procCode, dbCon)
 	err = putPayment(exeQue, dbCon)
+
 	if err != nil {
 		w.WriteHeader(500)
 		response.ResponseStatus.ReasonCode, response.ResponseStatus.ResponseDescription = 500, err.Error()
@@ -193,8 +199,8 @@ func deletePayment(w http.ResponseWriter, r *http.Request) {
 	} else {
 		payment, _ := selectPayment(procCode, dbCon)
 		if payment.ProcessingCode == "" {
-			w.WriteHeader(400)
-			response.ResponseCode, response.ResponseDescription = 400, "data not exist"
+			w.WriteHeader(404)
+			response.ResponseCode, response.ResponseDescription = 404, "data not exist"
 		} else {
 			dropPayment(procCode, dbCon)
 			w.WriteHeader(200)
