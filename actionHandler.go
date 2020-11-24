@@ -12,6 +12,9 @@ import (
 )
 
 func mainHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("ok")
+	err := pingDb(dbCon)
+	fmt.Println(err)
 }
 
 // handler action from route with request get all payments
@@ -63,7 +66,6 @@ func getPayment(w http.ResponseWriter, r *http.Request) {
 		} else if payment.ProcessingCode == "" {
 			w.WriteHeader(404)
 			response.ResponseStatus.ReasonCode, response.ResponseStatus.ResponseDescription = 404, "data not found"
-
 		} else {
 			w.WriteHeader(200)
 			response.ResponseStatus.ResponseCode, response.ResponseStatus.ResponseDescription = 200, "success"
