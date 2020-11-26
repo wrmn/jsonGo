@@ -134,7 +134,6 @@ func insertPayment(data Transaction, db *sql.DB) (string, error) {
 		data.CardHolderBillingCurrencyCode,
 		data.AdditionalDataNational,
 	)
-	errorCheck(e)
 	stmt.Close()
 	return data.ProcessingCode, e
 }
