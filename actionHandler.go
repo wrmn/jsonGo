@@ -112,6 +112,8 @@ func getPaymentIso(w http.ResponseWriter, r *http.Request) {
 	iso.AddField(50, transaction.SettlementCurrencyCode)
 	iso.AddField(51, transaction.CardHolderBillingCurrencyCode)
 	iso.AddField(57, transaction.AdditionalDataNational)
+	result, _ := iso.ToString()
+	w.Write([]byte(result))
 }
 
 //handler action from route with request post with json body required
