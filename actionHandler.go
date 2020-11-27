@@ -6,9 +6,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/mofax/iso8583"
 )
 
 func mainHandler(w http.ResponseWriter, r *http.Request) {
@@ -25,7 +27,7 @@ func getPayments(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	response := PaymentsResponse{}
-	fresponse := StatusPaymentsResponse{}
+	fresponse := FailPaymentsResponse{}
 	err := pingDb(dbCon)
 
 	if err != nil {
@@ -55,7 +57,7 @@ func getPayments(w http.ResponseWriter, r *http.Request) {
 func getPayment(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	response := PaymentResponse{}
-	fresponse := StatusPaymentsResponse{}
+	fresponse := FailPaymentsResponse{}
 	err := pingDb(dbCon)
 	processingCode := mux.Vars(r)["id"]
 
@@ -82,6 +84,36 @@ func getPayment(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func getPaymentIso(w http.ResponseWriter, r *http.Request) {
+	iso := iso8583.NewISOStruct("spec1987.yml", false)
+
+	processingCode := mux.Vars(r)["id"]
+	transaction, _ := selectPayment(processingCode, dbCon)
+	iso.AddMTI("0200")
+	iso.AddField(2, transaction.Pan)
+	iso.AddField(3, transaction.ProcessingCode)
+	iso.AddField(4, strconv.Itoa(transaction.TotalAmount))
+	iso.AddField(5, transaction.SettlementAmount)
+	iso.AddField(6, transaction.CardholderBillingAmount)
+	iso.AddField(7, transaction.TransmissionDateTime)
+	iso.AddField(9, transaction.SettlementConversionrate)
+	iso.AddField(10, transaction.CardHolderBillingConvRate)
+	iso.AddField(11, transaction.Stan)
+	iso.AddField(12, transaction.LocalTransactionTime)
+	iso.AddField(13, transaction.LocalTransactionDate)
+	iso.AddField(17, transaction.CaptureDate)
+	iso.AddField(18, transaction.CategoryCode)
+	iso.AddField(22, transaction.PointOfServiceEntryMode)
+	iso.AddField(37, transaction.Refnum)
+	iso.AddField(41, transaction.CardAcceptorData.CardAcceptorTerminalId)
+	iso.AddField(43, transaction.CardAcceptorData.CardAcceptorName)
+	iso.AddField(48, transaction.AdditionalData)
+	iso.AddField(49, transaction.Currency)
+	iso.AddField(50, transaction.SettlementCurrencyCode)
+	iso.AddField(51, transaction.CardHolderBillingCurrencyCode)
+	iso.AddField(57, transaction.AdditionalDataNational)
+}
+
 //handler action from route with request post with json body required
 //todo
 //check if json in correct format
@@ -93,7 +125,7 @@ func createPayment(w http.ResponseWriter, r *http.Request) {
 	b, err := ioutil.ReadAll(r.Body)
 	errorCheck(err)
 	response := PaymentResponse{}
-	fresponse := StatusPaymentsResponse{}
+	fresponse := FailPaymentsResponse{}
 
 	err = pingDb(dbCon)
 
@@ -149,7 +181,7 @@ func updatePayment(w http.ResponseWriter, r *http.Request) {
 	typeOfU := t.Type()
 	procCode := mux.Vars(r)["id"]
 	response := PaymentResponse{}
-	fresponse := StatusPaymentsResponse{}
+	fresponse := FailPaymentsResponse{}
 
 	for i := 0; i < s.NumField(); i++ {
 		f := s.Field(i)
@@ -202,23 +234,23 @@ func updatePayment(w http.ResponseWriter, r *http.Request) {
 //todo
 //return error from query
 func deletePayment(w http.ResponseWriter, r *http.Request) {
-	response := StatusPaymentsResponse{}
+	response := DelPaymentResponse{}
 	w.Header().Set("Content-Type", "application/json")
 	err := pingDb(dbCon)
 
 	procCode := mux.Vars(r)["id"]
 	if err != nil {
 		w.WriteHeader(500)
-		response.ResponseStatus.ResponseCode, response.ResponseStatus.ResponseDescription = 500, serverError
+		response.ResponseCode, response.ResponseDescription = 500, serverError
 	} else {
 		payment, _ := selectPayment(procCode, dbCon)
 		if payment.ProcessingCode == "" {
 			w.WriteHeader(404)
-			response.ResponseStatus.ReasonCode, response.ResponseStatus.ResponseDescription = 404, "data not exist"
+			response.ResponseCode, response.ResponseDescription = 404, "data not exist"
 		} else {
 			dropPayment(procCode, dbCon)
 			w.WriteHeader(200)
-			response.ResponseStatus.ReasonCode, response.ResponseStatus.ResponseDescription = 200, "Deleted"
+			response.ResponseCode, response.ResponseDescription = 200, "Deleted"
 		}
 	}
 

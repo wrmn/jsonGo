@@ -58,11 +58,17 @@ type PaymentsResponse struct {
 	TransactionData []Transaction `json:"transactionData"`
 	ResponseStatus  Response      `json:"responseStatus"`
 }
-type StatusPaymentsResponse struct {
+type FailPaymentsResponse struct {
 	ResponseStatus Response `json:"responseStatus"`
 }
 
 type PaymentResponse struct {
 	TransactionData Transaction `json:"response"`
 	ResponseStatus  Response    `json:"responseStatus"`
+}
+
+type DelPaymentResponse struct {
+	ResponseCode        int    `json:"responseCode"`
+	ReasonCode          int    `json:"reasonCode"`
+	ResponseDescription string `json:"responseDescription"`
 }
