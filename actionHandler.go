@@ -116,6 +116,19 @@ func getPaymentIso(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(result))
 }
 
+func toJson(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	//w.Header().Set("Content-Type", "application/json")
+	b, err := ioutil.ReadAll(r.Body)
+	errorCheck(err)
+	req := string(b)
+	iso := iso8583.NewISOStruct("spec1987.yml", false)
+	res, e := iso.Parse(req)
+	fmt.Print(e)
+	fmt.Print(res)
+
+}
+
 //handler action from route with request post with json body required
 //todo
 //check if json in correct format

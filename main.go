@@ -18,6 +18,7 @@ func main() {
 	r.HandleFunc("/payment/{id}", deletePayment).Methods("DELETE")
 	r.HandleFunc("/payment/{id}", getPayment).Methods("GET")
 	r.HandleFunc("/payment/{id}/iso8583", getPaymentIso).Methods("GET")
+	r.HandleFunc("/iso8583/toJson", toJson).Methods("GET")
 
 	http.ListenAndServe(":5050", r)
 }
