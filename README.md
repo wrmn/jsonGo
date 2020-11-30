@@ -27,12 +27,15 @@ go build -o {program name}
 #### GET
 - `/payment` : Get all transaction data
 - `/payment/{id}` : Get transaction data based on processingCode
+- `/payment/{id}/iso8583` : Get transaction data based on processingCode in iso8583 format
+- `/payment/iso8583/toJson` : send a body with iso8583 plain text and get response in json format (WIP)
 #### POST
 - `/payment` : Post and insert a new data to database based on JSON body that will send as data
 #### PUT
 - `/payment/{id}` : Put and update specific data with processing code that send as path with JSON body as updated data 
 #### DELETE 
 - `/payment/{id}` : Delete data with sended processing code from database
+
 
 ## ToDos
 - Showing Help when go to any method that not allowed, not found method, or home page

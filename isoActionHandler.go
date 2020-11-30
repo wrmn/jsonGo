@@ -55,8 +55,8 @@ func getPaymentIso(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, _ := iso.ToString()
-
-	w.Write([]byte(result + "|"))
+	fmt.Println(iso)
+	w.Write([]byte(result))
 }
 
 func toJson(w http.ResponseWriter, r *http.Request) {
@@ -66,7 +66,25 @@ func toJson(w http.ResponseWriter, r *http.Request) {
 	errorCheck(err)
 	req := string(b)
 	//iso := iso8583.NewISOStruct("spec1987.yml", false)
+	nice := iso8583.NewISOStruct("spec1987.yml", false)
+	mti := req[:4]
 	res := req[4:20]
-	fmt.Println(iso8583.HexToBitmapArray(res))
+	ele := req[21:]
+	fmt.Println(ele)
+	nice.AddMTI(mti)
+	bitmap, _ := iso8583.HexToBitmapArray(res)
+	nice.Bitmap = bitmap
+	for idx := range bitmap {
+		if bitmap[idx] == 1 {
+			fmt.Println("oke")
+		}
+	}
 
+	fmt.Println(nice)
+	/* sum, e := nice.Parse(req)*/
+
+	//if e != nil {
+	//fmt.Println(e.Error())
+	//}
+	/*fmt.Println(sum)*/
 }
