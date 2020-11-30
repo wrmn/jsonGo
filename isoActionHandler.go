@@ -20,29 +20,39 @@ func getPaymentIso(w http.ResponseWriter, r *http.Request) {
 		transaction.CardAcceptorData.CardAcceptorCity +
 		transaction.CardAcceptorData.CardAcceptorCountryCode
 
+	field := []int64{2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 17, 18, 22, 37, 41, 43, 48, 49, 50, 51, 57}
+	val := []string{transaction.Pan,
+		transaction.ProcessingCode,
+		strconv.Itoa(transaction.TotalAmount),
+		transaction.SettlementAmount,
+		transaction.CardholderBillingAmount,
+		transaction.TransmissionDateTime,
+		transaction.SettlementConversionrate,
+		transaction.CardHolderBillingConvRate,
+		transaction.Stan,
+		transaction.LocalTransactionTime,
+		transaction.LocalTransactionDate,
+		transaction.CaptureDate,
+		transaction.CategoryCode,
+		transaction.PointOfServiceEntryMode,
+		transaction.Refnum,
+		transaction.CardAcceptorData.CardAcceptorTerminalId,
+		cardAcceptor,
+		transaction.AdditionalData,
+		transaction.Currency,
+		transaction.SettlementCurrencyCode,
+		transaction.CardHolderBillingCurrencyCode,
+		transaction.AdditionalDataNational,
+	}
 	iso.AddMTI("0200")
-	iso.AddField(2, transaction.Pan)
-	iso.AddField(3, transaction.ProcessingCode)
-	iso.AddField(4, strconv.Itoa(transaction.TotalAmount))
-	iso.AddField(5, transaction.SettlementAmount)
-	iso.AddField(6, transaction.CardholderBillingAmount)
-	iso.AddField(7, transaction.TransmissionDateTime)
-	iso.AddField(9, transaction.SettlementConversionrate)
-	iso.AddField(10, transaction.CardHolderBillingConvRate)
-	iso.AddField(11, transaction.Stan)
-	iso.AddField(12, transaction.LocalTransactionTime)
-	iso.AddField(13, transaction.LocalTransactionDate)
-	iso.AddField(17, transaction.CaptureDate)
-	iso.AddField(18, transaction.CategoryCode)
-	iso.AddField(22, transaction.PointOfServiceEntryMode)
-	iso.AddField(37, transaction.Refnum)
-	iso.AddField(41, transaction.CardAcceptorData.CardAcceptorTerminalId)
-	iso.AddField(43, cardAcceptor)
-	iso.AddField(48, transaction.AdditionalData)
-	iso.AddField(49, transaction.Currency)
-	iso.AddField(50, transaction.SettlementCurrencyCode)
-	iso.AddField(51, transaction.CardHolderBillingCurrencyCode)
-	iso.AddField(57, transaction.AdditionalDataNational)
+
+	for idx := range field {
+		if val[idx] != "" && val[idx] != "0" {
+			fmt.Println(field[idx])
+			fmt.Println(val[idx])
+			iso.AddField(field[idx], val[idx])
+		}
+	}
 
 	result, _ := iso.ToString()
 
