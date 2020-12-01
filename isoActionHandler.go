@@ -28,7 +28,7 @@ func (s *Spec) readFromFile(filename string) error {
 	if err != nil {
 		return err
 	}
-	yaml.Unmarshal(content, &s.fields) // expecting content to be valid yaml
+	yaml.Unmarshal(content, &s.fields)
 	return nil
 }
 
@@ -48,10 +48,6 @@ func getPaymentIso(w http.ResponseWriter, r *http.Request) {
 	if e != nil {
 		fmt.Println(e.Error())
 	}
-	/*for len(amount) < 12 {*/
-	//amount = "0" + amount
-	/*}*/
-	//field := []int64{2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 17, 18, 22, 37, 41, 43, 48, 49, 50, 51, 57}
 	val := map[int]string{2: transaction.Pan,
 		3:  transaction.ProcessingCode,
 		4:  amount,
@@ -73,7 +69,7 @@ func getPaymentIso(w http.ResponseWriter, r *http.Request) {
 		49: transaction.Currency,
 		50: transaction.SettlementCurrencyCode,
 		51: transaction.CardHolderBillingCurrencyCode,
-		58: transaction.AdditionalDataNational,
+		57: transaction.AdditionalDataNational,
 	}
 	iso.AddMTI("0200")
 
@@ -94,57 +90,55 @@ func getPaymentIso(w http.ResponseWriter, r *http.Request) {
 
 func toJson(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	//w.Header().Set("Content-Type", "application/json")
+
 	b, err := ioutil.ReadAll(r.Body)
 	errorCheck(err)
+
 	req := string(b)
-	//iso := iso8583.NewISOStruct("spec1987.yml", false)
-	nice := iso8583.NewISOStruct("spec1987.yml", false)
 	something := Spec{}
+	nice := iso8583.NewISOStruct("spec1987.yml", false)
 	e := something.readFromFile("spec1987.yml")
+
 	if e != nil {
 		fmt.Println(e.Error())
 	}
+
 	mti := req[:4]
 	res := req[4:20]
 	ele := req[20:]
 	tlen := len(ele)
 	mark := 0
-	//fmt.Println(ele)
-	nice.AddMTI(mti)
+
 	bitmap, _ := iso8583.HexToBitmapArray(res)
+
+	nice.AddMTI(mti)
 	nice.Bitmap = bitmap
-	fmt.Println(bitmap)
 	for idx := range bitmap {
 		if bitmap[idx] == 1 {
 			element := something.fields[idx+1]
 			len := element.MaxLen
 			if element.LenType == "llvar" {
-				clen, _ := strconv.Atoi(ele[:2])
-				fmt.Println(element.Label)
-				fmt.Println(ele[mark+2 : mark+clen+2])
+				clen, _ := strconv.Atoi(ele[mark : mark+2])
+				//fmt.Println(element.Label)
+				//fmt.Println(ele[mark+2 : mark+clen+2])
+				nice.AddField(int64(idx+1), ele[mark+2:mark+clen+2])
 				tlen -= clen + 2
 				mark += clen + 2
 			} else if element.LenType == "lllvar" {
-				//clen, _ := strconv.Atoi(ele[:3])
-				fmt.Println(element.Label)
+				clen, _ := strconv.Atoi(ele[mark : mark+3])
+				//fmt.Println(element.Label)
 				//fmt.Println(ele[mark+3 : mark+clen+3])
-				//tlen -= clen + 3
-				//mark += clen + 3
+				nice.AddField(int64(idx+1), ele[mark+3:mark+clen+3])
+				tlen -= clen + 3
+				mark += clen + 3
 			} else {
-				fmt.Println(element.Label)
-				fmt.Println(ele[mark : mark+len])
+				//fmt.Println(element.Label)
+				//fmt.Println(ele[mark : mark+len])
+				nice.AddField(int64(idx+1), ele[mark:mark+len])
 				tlen -= len
 				mark += len
 			}
 		}
 	}
-	//spec := nice.Spec
-	//fmt.Println(spec)
-	/* sum, e := nice.Parse(req)*/
-
-	//if e != nil {
-	//fmt.Println(e.Error())
-	//}
-	/*fmt.Println(sum)*/
+	fmt.Println(nice)
 }
