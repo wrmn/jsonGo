@@ -6,9 +6,31 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/go-yaml/yaml"
 	"github.com/gorilla/mux"
 	"github.com/mofax/iso8583"
 )
+
+type FieldDescription struct {
+	ContentType string `yaml:"ContentType"`
+	MaxLen      int    `yaml:"MaxLen"`
+	MinLen      int    `yaml:"MinLen"`
+	LenType     string `yaml:"LenType"`
+	Label       string `yaml:"Label"`
+}
+
+type Spec struct {
+	fields map[int]FieldDescription
+}
+
+func (s *Spec) readFromFile(filename string) error {
+	content, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+	yaml.Unmarshal(content, &s.fields) // expecting content to be valid yaml
+	return nil
+}
 
 func getPaymentIso(w http.ResponseWriter, r *http.Request) {
 	iso := iso8583.NewISOStruct("spec1987.yml", false)
@@ -67,10 +89,16 @@ func toJson(w http.ResponseWriter, r *http.Request) {
 	req := string(b)
 	//iso := iso8583.NewISOStruct("spec1987.yml", false)
 	nice := iso8583.NewISOStruct("spec1987.yml", false)
+	something := Spec{}
+	e := something.readFromFile("spec1987.yml")
+	if e != nil {
+		fmt.Println(e.Error())
+	}
+	fmt.Println(something.fields[1].MaxLen)
 	mti := req[:4]
 	res := req[4:20]
-	ele := req[21:]
-	fmt.Println(ele)
+	//ele := req[21:]
+	//fmt.Println(ele)
 	nice.AddMTI(mti)
 	bitmap, _ := iso8583.HexToBitmapArray(res)
 	nice.Bitmap = bitmap
@@ -79,8 +107,8 @@ func toJson(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("oke")
 		}
 	}
-
-	fmt.Println(nice)
+	//spec := nice.Spec
+	//fmt.Println(spec)
 	/* sum, e := nice.Parse(req)*/
 
 	//if e != nil {
