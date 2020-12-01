@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -37,6 +38,13 @@ func getPaymentIso(w http.ResponseWriter, r *http.Request) {
 
 	processingCode := mux.Vars(r)["id"]
 	transaction, _ := selectPayment(processingCode, dbCon)
+
+	for len(transaction.CardAcceptorData.CardAcceptorCity) < 13 {
+		transaction.CardAcceptorData.CardAcceptorCity += " "
+	}
+	for len(transaction.CardAcceptorData.CardAcceptorName) < 25 {
+		transaction.CardAcceptorData.CardAcceptorName += " "
+	}
 
 	cardAcceptor := transaction.CardAcceptorData.CardAcceptorName +
 		transaction.CardAcceptorData.CardAcceptorCity +
@@ -140,5 +148,33 @@ func toJson(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	fmt.Println(nice)
+	elm := nice.Elements.GetElements()
+	payment := PaymentResponse{}
+	payment.TransactionData.Pan = elm[2]
+	payment.TransactionData.ProcessingCode = elm[3]
+	payment.TransactionData.TotalAmount = 123
+	payment.TransactionData.TransmissionDateTime = elm[7]
+	payment.TransactionData.LocalTransactionTime = elm[12]
+	payment.TransactionData.LocalTransactionDate = elm[13]
+	payment.TransactionData.CaptureDate = elm[17]
+	payment.TransactionData.AdditionalData = elm[48]
+	payment.TransactionData.Stan = elm[11]
+	payment.TransactionData.Refnum = elm[37]
+	payment.TransactionData.Currency = elm[49]
+	payment.TransactionData.CategoryCode = elm[18]
+	payment.TransactionData.SettlementAmount = elm[5]
+	payment.TransactionData.CardholderBillingAmount = elm[6]
+	payment.TransactionData.SettlementConversionrate = elm[9]
+	payment.TransactionData.CardHolderBillingConvRate = elm[10]
+	payment.TransactionData.PointOfServiceEntryMode = elm[22]
+	payment.TransactionData.SettlementCurrencyCode = elm[50]
+	payment.TransactionData.CardHolderBillingCurrencyCode = elm[51]
+	payment.TransactionData.AdditionalDataNational = elm[57]
+	payment.TransactionData.CardAcceptorData.CardAcceptorTerminalId = elm[41]
+	payment.TransactionData.CardAcceptorData.CardAcceptorName = elm[43][:24]
+	payment.TransactionData.CardAcceptorData.CardAcceptorCity = elm[43][25:38]
+	payment.TransactionData.CardAcceptorData.CardAcceptorCountryCode = elm[43][38:40]
+	fmt.Print(payment)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(payment)
 }
