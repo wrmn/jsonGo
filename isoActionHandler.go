@@ -42,38 +42,49 @@ func getPaymentIso(w http.ResponseWriter, r *http.Request) {
 		transaction.CardAcceptorData.CardAcceptorCity +
 		transaction.CardAcceptorData.CardAcceptorCountryCode
 
-	field := []int64{2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 17, 18, 22, 37, 41, 43, 48, 49, 50, 51, 57}
-	val := []string{transaction.Pan,
-		transaction.ProcessingCode,
-		strconv.Itoa(transaction.TotalAmount),
-		transaction.SettlementAmount,
-		transaction.CardholderBillingAmount,
-		transaction.TransmissionDateTime,
-		transaction.SettlementConversionrate,
-		transaction.CardHolderBillingConvRate,
-		transaction.Stan,
-		transaction.LocalTransactionTime,
-		transaction.LocalTransactionDate,
-		transaction.CaptureDate,
-		transaction.CategoryCode,
-		transaction.PointOfServiceEntryMode,
-		transaction.Refnum,
-		transaction.CardAcceptorData.CardAcceptorTerminalId,
-		cardAcceptor,
-		transaction.AdditionalData,
-		transaction.Currency,
-		transaction.SettlementCurrencyCode,
-		transaction.CardHolderBillingCurrencyCode,
-		transaction.AdditionalDataNational,
+	amount := strconv.Itoa(transaction.TotalAmount)
+	something := Spec{}
+	e := something.readFromFile("spec1987.yml")
+	if e != nil {
+		fmt.Println(e.Error())
+	}
+	/*for len(amount) < 12 {*/
+	//amount = "0" + amount
+	/*}*/
+	//field := []int64{2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 17, 18, 22, 37, 41, 43, 48, 49, 50, 51, 57}
+	val := map[int]string{2: transaction.Pan,
+		3:  transaction.ProcessingCode,
+		4:  amount,
+		5:  transaction.SettlementAmount,
+		6:  transaction.CardholderBillingAmount,
+		7:  transaction.TransmissionDateTime,
+		9:  transaction.SettlementConversionrate,
+		10: transaction.CardHolderBillingConvRate,
+		11: transaction.Stan,
+		12: transaction.LocalTransactionTime,
+		13: transaction.LocalTransactionDate,
+		17: transaction.CaptureDate,
+		18: transaction.CategoryCode,
+		22: transaction.PointOfServiceEntryMode,
+		37: transaction.Refnum,
+		41: transaction.CardAcceptorData.CardAcceptorTerminalId,
+		43: cardAcceptor,
+		48: transaction.AdditionalData,
+		49: transaction.Currency,
+		50: transaction.SettlementCurrencyCode,
+		51: transaction.CardHolderBillingCurrencyCode,
+		58: transaction.AdditionalDataNational,
 	}
 	iso.AddMTI("0200")
 
-	for idx := range field {
-		if val[idx] != "" && val[idx] != "0" {
-			fmt.Println(field[idx])
-			fmt.Println(val[idx])
-			iso.AddField(field[idx], val[idx])
+	for id := range something.fields {
+		ele := something.fields[id]
+		if ele.LenType == "fixed" {
+			for len(val[id]) < ele.MaxLen {
+				val[id] = val[id] + " "
+			}
 		}
+		iso.AddField(int64(id), val[id])
 	}
 
 	result, _ := iso.ToString()
@@ -115,6 +126,11 @@ func toJson(w http.ResponseWriter, r *http.Request) {
 				tlen -= clen + 2
 				mark += clen + 2
 			} else if element.LenType == "lllvar" {
+				//clen, _ := strconv.Atoi(ele[:3])
+				fmt.Println(element.Label)
+				//fmt.Println(ele[mark+3 : mark+clen+3])
+				//tlen -= clen + 3
+				//mark += clen + 3
 			} else {
 				fmt.Println(element.Label)
 				fmt.Println(ele[mark : mark+len])
