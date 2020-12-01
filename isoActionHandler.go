@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"strconv"
 
 	"github.com/go-yaml/yaml"
@@ -149,10 +150,15 @@ func toJson(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	elm := nice.Elements.GetElements()
+
+	reg, _ := regexp.Compile("[ ]")
+	amnt := reg.ReplaceAllString(elm[4], "")
+	amountTotal, _ := strconv.Atoi(amnt)
+
 	payment := PaymentResponse{}
 	payment.TransactionData.Pan = elm[2]
 	payment.TransactionData.ProcessingCode = elm[3]
-	payment.TransactionData.TotalAmount = 123
+	payment.TransactionData.TotalAmount = amountTotal
 	payment.TransactionData.TransmissionDateTime = elm[7]
 	payment.TransactionData.LocalTransactionTime = elm[12]
 	payment.TransactionData.LocalTransactionDate = elm[13]
@@ -174,7 +180,9 @@ func toJson(w http.ResponseWriter, r *http.Request) {
 	payment.TransactionData.CardAcceptorData.CardAcceptorName = elm[43][:24]
 	payment.TransactionData.CardAcceptorData.CardAcceptorCity = elm[43][25:38]
 	payment.TransactionData.CardAcceptorData.CardAcceptorCountryCode = elm[43][38:40]
-	fmt.Print(payment)
+	payment.ResponseStatus.ResponseCode = 200
+	payment.ResponseStatus.ResponseDescription = "success"
+	//fmt.Print(payment)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(payment)
 }

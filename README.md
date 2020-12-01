@@ -28,7 +28,7 @@ go build -o {program name}
 - `/payment` : Get all transaction data
 - `/payment/{id}` : Get transaction data based on processingCode
 - `/payment/{id}/iso8583` : Get transaction data based on processingCode in iso8583 format
-- `/payment/iso8583/toJson` : send a body with iso8583 plain text and get response in json format (WIP)
+- `/payment/iso8583/toJson` : send a body with iso8583 plain text and get response in json format
 #### POST
 - `/payment` : Post and insert a new data to database based on JSON body that will send as data
 #### PUT
