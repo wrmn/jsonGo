@@ -94,17 +94,33 @@ func toJson(w http.ResponseWriter, r *http.Request) {
 	if e != nil {
 		fmt.Println(e.Error())
 	}
-	fmt.Println(something.fields[1].MaxLen)
 	mti := req[:4]
 	res := req[4:20]
-	//ele := req[21:]
+	ele := req[20:]
+	tlen := len(ele)
+	mark := 0
 	//fmt.Println(ele)
 	nice.AddMTI(mti)
 	bitmap, _ := iso8583.HexToBitmapArray(res)
 	nice.Bitmap = bitmap
+	fmt.Println(bitmap)
 	for idx := range bitmap {
 		if bitmap[idx] == 1 {
-			fmt.Println("oke")
+			element := something.fields[idx+1]
+			len := element.MaxLen
+			if element.LenType == "llvar" {
+				clen, _ := strconv.Atoi(ele[:2])
+				fmt.Println(element.Label)
+				fmt.Println(ele[mark+2 : mark+clen+2])
+				tlen -= clen + 2
+				mark += clen + 2
+			} else if element.LenType == "lllvar" {
+			} else {
+				fmt.Println(element.Label)
+				fmt.Println(ele[mark : mark+len])
+				tlen -= len
+				mark += len
+			}
 		}
 	}
 	//spec := nice.Spec
