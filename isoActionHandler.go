@@ -35,11 +35,36 @@ func (s *Spec) readFromFile(filename string) error {
 }
 
 func getPaymentIso(w http.ResponseWriter, r *http.Request) {
-	iso := iso8583.NewISOStruct("spec1987.yml", false)
 
 	processingCode := mux.Vars(r)["id"]
 	transaction, _ := selectPayment(processingCode, dbCon)
+	result := jsonToIso(transaction)
+	lnth := strconv.Itoa(len(result))
+	for len(lnth) < 4 {
+		lnth = "0" + lnth
+	}
+	w.Write([]byte(lnth + result))
+}
 
+func toIso(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	b, err := ioutil.ReadAll(r.Body)
+	errorCheck(err)
+	var transaction Transaction
+	err = json.Unmarshal(b, &transaction)
+	result := jsonToIso(transaction)
+	lnth := strconv.Itoa(len(result))
+	for len(lnth) < 4 {
+		lnth = "0" + lnth
+	}
+	w.Write([]byte(lnth + result))
+
+}
+
+func jsonToIso(transaction Transaction) string {
+
+	iso := iso8583.NewISOStruct("spec1987.yml", false)
 	for len(transaction.CardAcceptorData.CardAcceptorCity) < 13 {
 		transaction.CardAcceptorData.CardAcceptorCity += " "
 	}
@@ -93,10 +118,9 @@ func getPaymentIso(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, _ := iso.ToString()
-	fmt.Println(iso)
-	w.Write([]byte(result))
-}
+	return result
 
+}
 func toJson(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
@@ -112,9 +136,9 @@ func toJson(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(e.Error())
 	}
 
-	mti := req[:4]
-	res := req[4:20]
-	ele := req[20:]
+	mti := req[4:8]
+	res := req[8:24]
+	ele := req[24:]
 	tlen := len(ele)
 	mark := 0
 
