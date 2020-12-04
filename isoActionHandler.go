@@ -40,11 +40,8 @@ func getPaymentIso(w http.ResponseWriter, r *http.Request) {
 	processingCode := mux.Vars(r)["id"]
 	transaction, _ := selectPayment(processingCode, dbCon)
 	result := jsonToIso(transaction)
-	lnth := strconv.Itoa(len(result))
-	for len(lnth) < 4 {
-		lnth = "0" + lnth
-	}
-	w.Write([]byte(lnth + result))
+
+	w.Write([]byte(result))
 }
 
 func toIso(w http.ResponseWriter, r *http.Request) {
@@ -55,16 +52,14 @@ func toIso(w http.ResponseWriter, r *http.Request) {
 	var transaction Transaction
 	err = json.Unmarshal(b, &transaction)
 	result := jsonToIso(transaction)
-	lnth := strconv.Itoa(len(result))
-	for len(lnth) < 4 {
-		lnth = "0" + lnth
-	}
-	w.Write([]byte(lnth + result))
+	w.Write([]byte(result))
 
 }
 
 func jsonToIso(transaction Transaction) string {
 
+	logWriter("New request ISO:8583 to Json")
+	logWriter("original : " + fmt.Sprint(transaction))
 	iso := iso8583.NewISOStruct("spec1987.yml", false)
 	for len(transaction.CardAcceptorData.CardAcceptorCity) < 13 {
 		transaction.CardAcceptorData.CardAcceptorCity += " "
@@ -119,6 +114,11 @@ func jsonToIso(transaction Transaction) string {
 				for len(val[id]) < ele.MaxLen {
 					val[id] = val[id] + " "
 				}
+				if ele.LenType == "fixed" {
+					logWriter(fmt.Sprintf("[%d] length %d = %s", id, ele.MaxLen, val[id]))
+				} else {
+					logWriter(fmt.Sprintf("[%d] length %d = %s", id, len(val[id]), val[id]))
+				}
 			}
 			if len(val[id]) > ele.MaxLen {
 				val[id] = val[id][:ele.MaxLen]
@@ -128,7 +128,23 @@ func jsonToIso(transaction Transaction) string {
 	}
 
 	result, _ := iso.ToString()
-	return result
+	lnth := strconv.Itoa(len(result))
+	for len(lnth) < 4 {
+		lnth = "0" + lnth
+	}
+
+	mti := result[:4]
+	res := result[4:20]
+	ele := result[20:]
+	bitmap, _ := iso8583.HexToBitmapArray(res)
+	logWriter("Full message	: " + lnth + result)
+	logWriter("Length		: " + lnth)
+	logWriter("Msg Only		: " + result)
+	logWriter("MTI			: " + mti)
+	logWriter("Hexmap		: " + res)
+	logWriter("Bitmap		: " + fmt.Sprintf("%d", bitmap))
+	logWriter("Element		: " + ele)
+	return lnth + result
 
 }
 
