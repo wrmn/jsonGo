@@ -39,6 +39,14 @@ func getPaymentIso(w http.ResponseWriter, r *http.Request) {
 
 	processingCode := mux.Vars(r)["id"]
 	transaction, _ := selectPayment(processingCode, dbCon)
+	if transaction.ProcessingCode == "" {
+		w.WriteHeader(405)
+		w.Write([]byte("processing code not found"))
+		logWriter("New request Json to ISO:8583")
+		logWriter("Incorrect fotmat")
+		logWriter(fmt.Sprintf("request for %s", processingCode))
+		return
+	}
 	result := jsonToIso(transaction)
 
 	w.Write([]byte(result))
@@ -51,6 +59,14 @@ func toIso(w http.ResponseWriter, r *http.Request) {
 	errorCheck(err)
 	var transaction Transaction
 	err = json.Unmarshal(b, &transaction)
+	if err != nil {
+		w.WriteHeader(405)
+		w.Write([]byte("incorrect format"))
+		logWriter("New request JSON to ISO:8583")
+		logWriter("Incorrect format")
+		logWriter(fmt.Sprintf("request for %s", transaction))
+		return
+	}
 	result := jsonToIso(transaction)
 	w.Write([]byte(result))
 
@@ -162,11 +178,24 @@ func toJson(w http.ResponseWriter, r *http.Request) {
 	if e != nil {
 		fmt.Println(e.Error())
 	}
+	lnt, err := strconv.Atoi(req[:4])
+
+	if len(req) != lnt+4 || err != nil {
+		w.WriteHeader(405)
+		w.Write([]byte("incorrect format"))
+		logWriter("New request JSON to ISO:8583")
+		logWriter("Incorrect format")
+		logWriter(fmt.Sprintf("request for %s", req))
+		return
+	}
 
 	mti := req[4:8]
 	res := req[8:24]
 	ele := req[24:]
 	bitmap, _ := iso8583.HexToBitmapArray(res)
+	fmt.Println(req)
+	fmt.Println(lnt)
+	fmt.Println(err.Error())
 
 	logWriter("New request ISO:8583 to Json")
 	logWriter("Full message	: " + req)
