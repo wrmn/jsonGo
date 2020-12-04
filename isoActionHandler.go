@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"regexp"
+	"os"
 	"strconv"
+	"time"
 
 	"github.com/go-yaml/yaml"
 	"github.com/gorilla/mux"
@@ -110,8 +111,17 @@ func jsonToIso(transaction Transaction) string {
 	for id := range something.fields {
 		ele := something.fields[id]
 		if ele.LenType == "fixed" {
-			for len(val[id]) < ele.MaxLen {
-				val[id] = val[id] + " "
+			if id == 4 {
+				for len(val[id]) < ele.MaxLen {
+					val[id] = "0" + val[id]
+				}
+			} else {
+				for len(val[id]) < ele.MaxLen {
+					val[id] = val[id] + " "
+				}
+			}
+			if len(val[id]) > ele.MaxLen {
+				val[id] = val[id][:ele.MaxLen]
 			}
 		}
 		iso.AddField(int64(id), val[id])
@@ -121,6 +131,7 @@ func jsonToIso(transaction Transaction) string {
 	return result
 
 }
+
 func toJson(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
@@ -139,10 +150,19 @@ func toJson(w http.ResponseWriter, r *http.Request) {
 	mti := req[4:8]
 	res := req[8:24]
 	ele := req[24:]
+	bitmap, _ := iso8583.HexToBitmapArray(res)
+
+	logWriter("New request ISO:8583 to Json")
+	logWriter("Full message	: " + req)
+	logWriter("Length		: " + req[:4])
+	logWriter("Msg Only		: " + req[4:])
+	logWriter("MTI			: " + mti)
+	logWriter("Hexmap		: " + res)
+	logWriter("Bitmap		: " + fmt.Sprintf("%d", bitmap))
+	logWriter("Element		: " + ele)
+
 	tlen := len(ele)
 	mark := 0
-
-	bitmap, _ := iso8583.HexToBitmapArray(res)
 
 	nice.AddMTI(mti)
 	nice.Bitmap = bitmap
@@ -152,21 +172,21 @@ func toJson(w http.ResponseWriter, r *http.Request) {
 			len := element.MaxLen
 			if element.LenType == "llvar" {
 				clen, _ := strconv.Atoi(ele[mark : mark+2])
-				//fmt.Println(element.Label)
-				//fmt.Println(ele[mark+2 : mark+clen+2])
+				msg := fmt.Sprintf("[%d] length %d = %s", idx, clen, ele[mark+2:mark+clen+2])
+				logWriter(msg)
 				nice.AddField(int64(idx+1), ele[mark+2:mark+clen+2])
 				tlen -= clen + 2
 				mark += clen + 2
 			} else if element.LenType == "lllvar" {
 				clen, _ := strconv.Atoi(ele[mark : mark+3])
-				//fmt.Println(element.Label)
-				//fmt.Println(ele[mark+3 : mark+clen+3])
+				msg := fmt.Sprintf("[%d] length %d =  %s", idx, clen, ele[mark+3:mark+clen+3])
+				logWriter(msg)
 				nice.AddField(int64(idx+1), ele[mark+3:mark+clen+3])
 				tlen -= clen + 3
 				mark += clen + 3
 			} else {
-				//fmt.Println(element.Label)
-				//fmt.Println(ele[mark : mark+len])
+				msg := fmt.Sprintf("[%d] length %d = %s", idx, len, ele[mark:mark+len])
+				logWriter(msg)
 				nice.AddField(int64(idx+1), ele[mark:mark+len])
 				tlen -= len
 				mark += len
@@ -175,9 +195,7 @@ func toJson(w http.ResponseWriter, r *http.Request) {
 	}
 	elm := nice.Elements.GetElements()
 
-	reg, _ := regexp.Compile("[ ]")
-	amnt := reg.ReplaceAllString(elm[4], "")
-	amountTotal, _ := strconv.Atoi(amnt)
+	amountTotal, _ := strconv.Atoi(elm[4])
 
 	payment := PaymentResponse{}
 	payment.TransactionData.Pan = elm[2]
@@ -209,4 +227,14 @@ func toJson(w http.ResponseWriter, r *http.Request) {
 	//fmt.Print(payment)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(payment)
+}
+
+func logWriter(msg string) {
+	log, _ := os.OpenFile("log.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	defer log.Close()
+
+	dt := time.Now()
+
+	_, err := log.Write([]byte(dt.Format("01-02-2006 15:04:05 ") + msg + "\n"))
+	errorCheck(err)
 }

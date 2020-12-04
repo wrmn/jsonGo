@@ -10,6 +10,7 @@ import (
 
 func main() {
 	r := mux.NewRouter()
+
 	dbCon = initDb()
 	r.HandleFunc("/", mainHandler)
 	r.HandleFunc("/payment", getPayments).Methods("GET")
