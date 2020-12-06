@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -47,8 +48,11 @@ func getPaymentIso(w http.ResponseWriter, r *http.Request) {
 		logWriter(fmt.Sprintf("request for %s", processingCode))
 		return
 	}
-	result := jsonToIso(transaction)
-
+	result, err := jsonToIso(transaction)
+	if err != nil {
+		w.WriteHeader(405)
+		w.Write([]byte(err.Error()))
+	}
 	w.Write([]byte(result))
 }
 
@@ -67,27 +71,34 @@ func toIso(w http.ResponseWriter, r *http.Request) {
 		logWriter(fmt.Sprintf("request for %s", transaction))
 		return
 	}
-	result := jsonToIso(transaction)
+	result, err := jsonToIso(transaction)
+	if err != nil {
+		w.WriteHeader(405)
+		w.Write([]byte(err.Error()))
+	}
 	w.Write([]byte(result))
 
 }
 
-func jsonToIso(transaction Transaction) string {
-
+func jsonToIso(transaction Transaction) (string, error) {
 	logWriter("New request ISO:8583 to Json")
 	logWriter("original : " + fmt.Sprint(transaction))
 	iso := iso8583.NewISOStruct("spec1987.yml", false)
-	for len(transaction.CardAcceptorData.CardAcceptorCity) < 13 {
-		transaction.CardAcceptorData.CardAcceptorCity += " "
-	}
-	for len(transaction.CardAcceptorData.CardAcceptorName) < 25 {
-		transaction.CardAcceptorData.CardAcceptorName += " "
-	}
+	var cardAcceptor string
+	if transaction.CardAcceptorData.CardAcceptorCity != "" ||
+		transaction.CardAcceptorData.CardAcceptorCountryCode != "" ||
+		transaction.CardAcceptorData.CardAcceptorCountryCode != "" {
+		for len(transaction.CardAcceptorData.CardAcceptorCity) < 13 {
+			transaction.CardAcceptorData.CardAcceptorCity += " "
+		}
+		for len(transaction.CardAcceptorData.CardAcceptorName) < 25 {
+			transaction.CardAcceptorData.CardAcceptorName += " "
+		}
 
-	cardAcceptor := transaction.CardAcceptorData.CardAcceptorName +
-		transaction.CardAcceptorData.CardAcceptorCity +
-		transaction.CardAcceptorData.CardAcceptorCountryCode
-
+		cardAcceptor = transaction.CardAcceptorData.CardAcceptorName +
+			transaction.CardAcceptorData.CardAcceptorCity +
+			transaction.CardAcceptorData.CardAcceptorCountryCode
+	}
 	amount := strconv.Itoa(transaction.TotalAmount)
 	something := Spec{}
 	e := something.readFromFile("spec1987.yml")
@@ -121,7 +132,7 @@ func jsonToIso(transaction Transaction) string {
 
 	for id := range something.fields {
 		ele := something.fields[id]
-		if ele.LenType == "fixed" {
+		if ele.LenType == "fixed" && val[id] != "" {
 			if id == 4 {
 				for len(val[id]) < ele.MaxLen {
 					val[id] = "0" + val[id]
@@ -130,17 +141,26 @@ func jsonToIso(transaction Transaction) string {
 				for len(val[id]) < ele.MaxLen {
 					val[id] = val[id] + " "
 				}
-				if ele.LenType == "fixed" {
-					logWriter(fmt.Sprintf("[%d] length %d = %s", id, ele.MaxLen, val[id]))
-				} else {
-					logWriter(fmt.Sprintf("[%d] length %d = %s", id, len(val[id]), val[id]))
-				}
 			}
 			if len(val[id]) > ele.MaxLen {
 				val[id] = val[id][:ele.MaxLen]
 			}
+			logWriter(fmt.Sprintf("[%d] length %d = %s", id, ele.MaxLen, val[id]))
+		} else if val[id] != "" {
+			logWriter(fmt.Sprintf("[%d] length %d = %s", id, len(val[id]), val[id]))
 		}
-		iso.AddField(int64(id), val[id])
+
+		if ele.ContentType == "m" && val[id] == "" {
+			missing := fmt.Sprintf("mandatory field required \n%s is empty", ele.Label)
+			logWriter(missing)
+			logWriter("request aborted")
+			return "", errors.New(missing)
+		}
+
+		if val[id] != "" {
+			iso.AddField(int64(id), val[id])
+		}
+
 	}
 
 	result, _ := iso.ToString()
@@ -160,7 +180,7 @@ func jsonToIso(transaction Transaction) string {
 	logWriter("Hexmap		: " + res)
 	logWriter("Bitmap		: " + fmt.Sprintf("%d", bitmap))
 	logWriter("Element		: " + ele)
-	return lnth + result
+	return lnth + result, nil
 
 }
 
@@ -181,11 +201,15 @@ func toJson(w http.ResponseWriter, r *http.Request) {
 	lnt, err := strconv.Atoi(req[:4])
 
 	if len(req) != lnt+4 || err != nil {
-		w.WriteHeader(405)
-		w.Write([]byte("incorrect format"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(400)
 		logWriter("New request JSON to ISO:8583")
 		logWriter("Incorrect format")
 		logWriter(fmt.Sprintf("request for %s", req))
+		response := DelPaymentResponse{}
+		response.ResponseCode = 400
+		response.ResponseDescription = "invalid iso format"
+		json.NewEncoder(w).Encode(response)
 		return
 	}
 
@@ -193,9 +217,6 @@ func toJson(w http.ResponseWriter, r *http.Request) {
 	res := req[8:24]
 	ele := req[24:]
 	bitmap, _ := iso8583.HexToBitmapArray(res)
-	fmt.Println(req)
-	fmt.Println(lnt)
-	fmt.Println(err.Error())
 
 	logWriter("New request ISO:8583 to Json")
 	logWriter("Full message	: " + req)
@@ -241,7 +262,6 @@ func toJson(w http.ResponseWriter, r *http.Request) {
 	elm := nice.Elements.GetElements()
 
 	amountTotal, _ := strconv.Atoi(elm[4])
-
 	payment := PaymentResponse{}
 	payment.TransactionData.Pan = elm[2]
 	payment.TransactionData.ProcessingCode = elm[3]
@@ -264,9 +284,11 @@ func toJson(w http.ResponseWriter, r *http.Request) {
 	payment.TransactionData.CardHolderBillingCurrencyCode = elm[51]
 	payment.TransactionData.AdditionalDataNational = elm[57]
 	payment.TransactionData.CardAcceptorData.CardAcceptorTerminalId = elm[41]
-	payment.TransactionData.CardAcceptorData.CardAcceptorName = elm[43][:24]
-	payment.TransactionData.CardAcceptorData.CardAcceptorCity = elm[43][25:38]
-	payment.TransactionData.CardAcceptorData.CardAcceptorCountryCode = elm[43][38:40]
+	if elm[43] != "" {
+		payment.TransactionData.CardAcceptorData.CardAcceptorName = elm[43][:24]
+		payment.TransactionData.CardAcceptorData.CardAcceptorCity = elm[43][25:38]
+		payment.TransactionData.CardAcceptorData.CardAcceptorCountryCode = elm[43][38:40]
+	}
 	payment.ResponseStatus.ResponseCode = 200
 	payment.ResponseStatus.ResponseDescription = "success"
 	//fmt.Print(payment)

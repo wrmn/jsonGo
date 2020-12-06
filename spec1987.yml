@@ -1,16 +1,16 @@
 2:
-  ContentType: "n"
+  ContentType: m
   Label: Primary account number (PAN)
   LenType: llvar
   MaxLen: 19
   MinLen: 12
 3:
-  ContentType: "n"
+  ContentType: m
   Label: Processing code
   LenType: fixed
   MaxLen: 6
 4:
-  ContentType: "n"
+  ContentType: m
   Label: Amount, transaction
   LenType: fixed
   MaxLen: 12
@@ -25,7 +25,7 @@
   LenType: fixed
   MaxLen: 12
 7:
-  ContentType: "n"
+  ContentType: m
   Label: Transmission date & time
   LenType: fixed
   MaxLen: 10
@@ -40,27 +40,27 @@
   LenType: fixed
   MaxLen: 8
 11:
-  ContentType: "n"
+  ContentType: m
   Label: System trace audit number
   LenType: fixed
   MaxLen: 6
 12:
-  ContentType: "n"
+  ContentType: m
   Label: Time, local transaction (hhmmss)
   LenType: fixed
   MaxLen: 6
 13:
-  ContentType: "n"
+  ContentType: m
   Label: Date, local transaction (MMDD)
   LenType: fixed
   MaxLen: 4
 17:
-  ContentType: "n"
+  ContentType: m
   Label: Date, capture
   LenType: fixed
   MaxLen: 4
 18:
-  ContentType: "n"
+  ContentType: n
   Label: Merchant type
   LenType: fixed
   MaxLen: 4
@@ -70,7 +70,7 @@
   LenType: fixed
   MaxLen: 3
 37:
-  ContentType: an
+  ContentType: m
   Label: Retrieval reference number
   LenType: fixed
   MaxLen: 12
@@ -85,12 +85,12 @@
   LenType: fixed
   MaxLen: 40
 48:
-  ContentType: an
+  ContentType: m
   Label: Additional data - private
   LenType: lllvar
   MaxLen: 999
 49:
-  ContentType: an
+  ContentType: m
   Label: Currency code, transaction
   LenType: fixed
   MaxLen: 3
